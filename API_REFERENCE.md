@@ -43,6 +43,9 @@ to the underlying API. Meal-plan writes are intentionally not exposed.
 **Core read tools:**
 - `get_sync_status`, `list_recipes`, `get_recipe`, `list_categories`, `list_grocery_lists`, `list_grocery_items`, `list_meal_plans`
 
+**CLI update helper:**
+- `paprika-mcp update` pulls the latest git changes, reinstalls the package, and restarts the LaunchAgent if installed.
+
 ---
 
 ## Paprika Recipe Manager API

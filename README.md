@@ -27,6 +27,7 @@ $HOME/.local/bin/paprika-mcp --help
 - `paprika-mcp run`
 - `paprika-mcp install`
 - `paprika-mcp uninstall`
+- `paprika-mcp update`
 - `paprika-mcp status`
 - `paprika-mcp logs`
 

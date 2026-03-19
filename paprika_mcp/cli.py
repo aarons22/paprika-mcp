@@ -67,6 +67,37 @@ def _resolve_entrypoint() -> str:
     raise RuntimeError("Could not find 'paprika-mcp' in PATH or alongside current Python interpreter.")
 
 
+def _find_repo_root(start: Path) -> Path | None:
+    for candidate in (start, *start.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def _resolve_repo_root() -> Path:
+    env_root = os.environ.get("PAPRIKA_MCP_REPO")
+    if env_root:
+        root = Path(env_root).expanduser().resolve()
+        if (root / ".git").exists():
+            return root
+        raise RuntimeError(f"PAPRIKA_MCP_REPO is not a git repo: {root}")
+
+    entrypoint = Path(sys.argv[0])
+    if entrypoint.exists():
+        repo_root = _find_repo_root(entrypoint.resolve())
+        if repo_root:
+            return repo_root
+
+    repo_root = _find_repo_root(Path.cwd().resolve())
+    if repo_root:
+        return repo_root
+
+    raise RuntimeError(
+        "Could not locate the paprika-mcp git repository. "
+        "Set PAPRIKA_MCP_REPO to the repo path or run the installer."
+    )
+
+
 def _write_plist(entrypoint: str) -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     PLIST_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -161,6 +192,50 @@ def cmd_logs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_update(_: argparse.Namespace) -> int:
+    if not shutil.which("git"):
+        _print("❌ git is required to update but was not found.")
+        return 1
+
+    try:
+        repo_root = _resolve_repo_root()
+    except Exception as exc:
+        _print(f"❌ {exc}")
+        return 1
+
+    pull = subprocess.run(["git", "-C", str(repo_root), "pull", "--ff-only"], check=False)
+    if pull.returncode != 0:
+        _print("❌ git pull failed. Resolve any local changes and try again.")
+        return pull.returncode
+
+    pip = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-e", str(repo_root)],
+        check=False,
+    )
+    if pip.returncode != 0:
+        _print("❌ pip install failed. Try re-running the installer.")
+        return pip.returncode
+
+    if PLIST_PATH.exists():
+        try:
+            entrypoint = _resolve_entrypoint()
+            _write_plist(entrypoint)
+        except Exception as exc:
+            _print(f"⚠️ Updated, but could not refresh LaunchAgent: {exc}")
+            return 0
+
+        domain = f"gui/{os.getuid()}"
+        _launchctl("bootout", domain, str(PLIST_PATH))
+        _launchctl("bootstrap", domain, str(PLIST_PATH))
+        _launchctl("enable", f"{domain}/com.paprika.mcp")
+        _launchctl("kickstart", "-k", f"{domain}/com.paprika.mcp")
+        _print("✅ Updated and restarted LaunchAgent.")
+        return 0
+
+    _print("✅ Updated. LaunchAgent not installed; run 'paprika-mcp install' to enable it.")
+    return 0
+
+
 def cmd_run(_: argparse.Namespace) -> int:
     server_main()
     return 0
@@ -182,6 +257,8 @@ def create_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("run", help="Run MCP server in foreground")
     subparsers.add_parser("install", help="Install LaunchAgent")
     subparsers.add_parser("uninstall", help="Uninstall LaunchAgent")
+
+    subparsers.add_parser("update", help="Update paprika-mcp and restart LaunchAgent")
 
     subparsers.add_parser("status", help="Show LaunchAgent status")
 
@@ -206,6 +283,7 @@ def main() -> int:
         "uninstall": cmd_uninstall,
         "status": cmd_status,
         "logs": cmd_logs,
+        "update": cmd_update,
     }
 
     handler = handlers.get(args.command)
