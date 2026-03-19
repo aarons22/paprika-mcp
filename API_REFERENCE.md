@@ -26,6 +26,25 @@ For high-level implementation patterns and sync logic, refer to `./CLAUDE.md`.
 
 ---
 
+## MCP Tooling (Paprika)
+
+These tools are intentionally curated for agent workflows and are not a 1:1 mapping
+to the underlying API. Meal-plan writes are intentionally not exposed.
+
+**Read helpers:**
+- `get_meals_for_date(date)` - Return meal plan entries for a specific `YYYY-MM-DD` date with `meal_type_name` added.
+
+**Writes (limited):**
+- `add_grocery_item(list_uid, name, quantity?, instruction?, purchased?, ingredient?, order_flag?, separate?, recipe_uid?)`
+  - `list_uid` is required.
+  - `ingredient` defaults to `name.lower()` when omitted.
+  - `aisle` is always sent as an empty string to allow Paprika auto-assignment.
+
+**Core read tools:**
+- `get_sync_status`, `list_recipes`, `get_recipe`, `list_categories`, `list_grocery_lists`, `list_grocery_items`, `list_meal_plans`
+
+---
+
 ## Paprika Recipe Manager API
 
 ### Base URL
@@ -131,6 +150,7 @@ Authorization: Bearer <token>
 
 **Tooling Note:**
 - The MCP tool `list_grocery_items` requires `list_uid` and filters by list; set `include_checked=true` to include purchased items.
+- The MCP tool `add_grocery_item` requires `list_uid`; when `ingredient` is omitted it defaults to `name.lower()` and `aisle` is left empty for auto-assignment.
 
 #### Create/Update Grocery Items
 **Request:**

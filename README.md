@@ -41,6 +41,8 @@ $HOME/.local/bin/paprika-mcp --help
 | `list_grocery_lists` | List all grocery lists |
 | `list_grocery_items(list_uid, include_checked?)` | List grocery items for a specific list |
 | `list_meal_plans(start_date?, end_date?)` | List meal plan entries, optionally filtered by date |
+| `get_meals_for_date(date)` | Get meal plan entries for a specific date |
+| `add_grocery_item(list_uid, name, ...)` | Add a grocery item to a specific list |
 
 ## Config
 

@@ -127,6 +127,51 @@ def list_meal_plans(start_date: str | None = None, end_date: str | None = None) 
     return meals
 
 
+@mcp.tool()
+def get_meals_for_date(date: str) -> list[dict]:
+    """Get meal plan entries for a specific date (YYYY-MM-DD).
+
+    Returns meals scheduled on the given date with an added meal_type_name field.
+    """
+    meals = _client().list_meal_plans()
+    filtered: list[dict] = []
+    for meal in meals:
+        meal_date = meal.get("date", "").split(" ")[0]
+        if meal_date == date:
+            meal["meal_type_name"] = MEAL_TYPES.get(meal.get("type"), "Unknown")
+            filtered.append(meal)
+    return filtered
+
+
+@mcp.tool()
+def add_grocery_item(
+    list_uid: str,
+    name: str,
+    quantity: str | None = None,
+    instruction: str | None = None,
+    purchased: bool = False,
+    ingredient: str | None = None,
+    order_flag: int = 0,
+    separate: bool = False,
+    recipe_uid: str | None = None,
+) -> dict:
+    """Add a grocery item to a specific list.
+
+    Requires list_uid. If ingredient is not provided, it defaults to name.lower().
+    """
+    return _client().create_grocery_item(
+        list_uid=list_uid,
+        name=name,
+        quantity=quantity,
+        instruction=instruction,
+        purchased=purchased,
+        ingredient=ingredient,
+        order_flag=order_flag,
+        separate=separate,
+        recipe_uid=recipe_uid,
+    )
+
+
 def main() -> None:
     settings = get_settings()
     mcp.run(transport="http", host="127.0.0.1", port=settings.paprika_port)

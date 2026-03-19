@@ -1,6 +1,7 @@
 import base64
 import gzip
 import json
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -122,3 +123,37 @@ class PaprikaClient:
     def list_meal_plans(self) -> list:
         """Return all meal plan entries."""
         return self._request("GET", "/v2/sync/meals/")["result"]
+
+    def create_grocery_item(
+        self,
+        list_uid: str,
+        name: str,
+        quantity: str | None = None,
+        instruction: str | None = None,
+        purchased: bool = False,
+        ingredient: str | None = None,
+        order_flag: int = 0,
+        separate: bool = False,
+        recipe_uid: str | None = None,
+    ) -> dict:
+        """Create a new grocery item on the specified list."""
+        item = {
+            "uid": str(uuid.uuid4()).upper(),
+            "recipe_uid": recipe_uid,
+            "name": name,
+            "order_flag": order_flag,
+            "purchased": purchased,
+            "aisle": "",
+            "ingredient": ingredient if ingredient is not None else name.lower(),
+            "recipe": None,
+            "instruction": instruction or "",
+            "quantity": quantity or "",
+            "separate": separate,
+            "list_uid": list_uid,
+        }
+        payload = gzip.compress(json.dumps([item]).encode("utf-8"))
+        return self._request(
+            "POST",
+            "/v2/sync/groceries/",
+            files={"data": ("data", payload)},
+        )
